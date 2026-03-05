@@ -45,6 +45,6 @@ os.makedirs(EMBEDDING_DIR, exist_ok=True)
 faiss.write_index(index, f"{EMBEDDING_DIR}/clothing_index.faiss")
 
 # Save metadata
-df.to_csv(f"{EMBEDDING_DIR}/metadata.csv", index=False)
+df.to_csv(f"{EMBEDDING_DIR}/clothing_metadata.csv", index=False)
 
 print("Embeddings saved!")
