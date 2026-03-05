@@ -1,36 +1,65 @@
 import os
 import pandas as pd
 
-unprocessed = "data/data-raw/styles.csv"
-images_folder = "data/data-raw/images"
-processed = "data/processed/styles_cleaned.csv"
+# -----------------------------
+# FILE PATHS
+# -----------------------------
+INPUT_FILE = "data/data-processed/styles_cleaned.csv"
+OUTPUT_FILE = "data/data-processed/styles_final.csv"
 
-df = pd.read_csv(unprocessed, on_bad_lines="skip")
-print(f"Loaded dataset with {df.shape[0]} rows and {df.shape[1]} columns")
+# -----------------------------
+# LOAD DATA
+# -----------------------------
+df = pd.read_csv(INPUT_FILE)
 
-df.columns = df.columns.str.lower()
+print("Dataset loaded")
+print(f"Rows: {df.shape[0]}")
+print(f"Columns: {df.shape[1]}")
 
-df = df.dropna(subset=["mastercategory", "subcategory"])
-df["season"] = df["season"].fillna("Unknown")
-df["usage"] = df["usage"].fillna("Unknown")
+# -----------------------------
+# STANDARDIZE COLUMN NAMES
+# -----------------------------
+df.columns = df.columns.str.lower().str.strip()
 
-def image_exists(article_id):
-    # Image filename is usually <id>.jpg
-    img_path = os.path.join(images_folder, f"{article_id}.jpg")
-    return os.path.exists(img_path)
+# -----------------------------
+# DROP DUPLICATES
+# -----------------------------
+before = df.shape[0]
+df = df.drop_duplicates()
+after = df.shape[0]
 
-df["image_exists"] = df["id"].apply(image_exists)
+print(f"Removed {before - after} duplicate rows")
 
-# Keep only rows with valid images
-df = df[df["image_exists"] == True]
+# -----------------------------
+# HANDLE MISSING VALUES
+# -----------------------------
+for column in df.columns:
+    if df[column].dtype == "object":
+        df[column] = df[column].fillna("Unknown")
+    else:
+        df[column] = df[column].fillna(0)
 
-# Drop helper column
-df = df.drop(columns=["image_exists"])
+# -----------------------------
+# CLEAN TEXT COLUMNS
+# -----------------------------
+text_columns = ["gender", "mastercategory", "subcategory", "articleType", "season", "usage"]
 
-print(f"After cleaning, {df.shape[0]} rows remain")# Keep only rows with valid images
-df = df[df["image_exists"] == True]
+for col in text_columns:
+    if col.lower() in df.columns:
+        df[col.lower()] = df[col.lower()].astype(str).str.strip().str.lower()
 
-os.makedirs(os.path.dirname(processed), exist_ok=True)
-df.to_csv(processed, index=False)
+# -----------------------------
+# REMOVE INVALID CATEGORIES
+# -----------------------------
+df = df[df["mastercategory"] != "unknown"]
 
-print(f"Cleaned dataset saved to {processed}")
+# -----------------------------
+# SAVE CLEAN DATASET
+# -----------------------------
+os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
+
+df.to_csv(OUTPUT_FILE, index=False)
+
+print("Cleaned dataset saved")
+print(f"Final dataset rows: {df.shape[0]}")
+print(f"Saved to: {OUTPUT_FILE}")
